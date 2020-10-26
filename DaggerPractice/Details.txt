@@ -1,0 +1,88 @@
+										MediatorLiveData
+
+
+
+LiveData subclass which may observe other LiveData objects and react on OnChanged events from them.
+
+This class correctly propagates its active/inactive states down to source LiveData objects.
+
+Consider the following scenario: we have 2 instances of LiveData, let's name them liveData1 and liveData2, and we want to merge their emissions in one object: liveDataMerger. 
+Then, liveData1 and liveData2 will become sources for the MediatorLiveData liveDataMerger and every time onChanged callback is called for either of them, we set a new value in 
+liveDataMerger.
+
+ LiveData liveData1 = ...;
+ LiveData liveData2 = ...;
+
+ MediatorLiveData liveDataMerger = new MediatorLiveData<>();
+ liveDataMerger.addSource(liveData1, value -> liveDataMerger.setValue(value));
+ liveDataMerger.addSource(liveData2, value -> liveDataMerger.setValue(value));
+ 
+
+Let's consider that we only want 10 values emitted by liveData1, to be merged in the liveDataMerger. Then, after 10 values, we can stop listening to liveData1 and remove 
+it as a source.
+
+ liveDataMerger.addSource(liveData1, new Observer() {
+      private int count = 1;
+
+      @Override public void onChanged(@Nullable Integer s) {
+          count++;
+          liveDataMerger.setValue(s);
+          if (count > 10) {
+              liveDataMerger.removeSource(liveData1);
+          }
+      }
+ });
+
+
+				Public constructors : 
+
+1) MediatorLiveData
+
+public MediatorLiveData()
+
+
+
+				Public methods
+
+
+
+1) addSource
+public void addSource (LiveData<S> source, 
+                Observer<? super S> onChanged)
+Starts to listen the given source LiveData, onChanged observer will be called when source value was changed.
+
+onChanged callback will be called only when this MediatorLiveData is active.
+
+If the given LiveData is already added as a source but with a different Observer, IllegalArgumentException will be thrown.
+
+Parameters : 
+
+source	LiveData: the LiveData to listen to
+onChanged	Observer: The observer that will receive the events
+
+
+2) removeSource
+public void removeSource (LiveData<S> toRemote)
+Stops to listen the given LiveData.
+
+Parameters
+toRemote	LiveData: LiveData to stop to listen
+
+
+
+
+				Protected methods
+
+1) onActive
+protected void onActive ()
+Called when the number of active observers change from 0 to 1.
+
+This callback can be used to know that this LiveData is being used thus should be kept up to date.
+
+2) onInactive
+protected void onInactive ()
+Called when the number of active observers change from 1 to 0.
+
+This does not mean that there are no observers left, there may still be observers but their lifecycle states aren't Lifecycle.State.STARTED or Lifecycle.State.RESUMED (like an Activity in the back stack).
+
+You can check if there are observers via hasObservers().
